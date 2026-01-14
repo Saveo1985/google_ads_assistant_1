@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { subscribeToMessages, sendMessage, saveKnowledge } from '../../firebase';
 import ChatInterface from '../../components/ChatInterface';
+import { chatWithAI } from '../../services/ai';
 
 const ClientAssistant = () => {
     const { clientId } = useParams();
@@ -24,20 +25,19 @@ const ClientAssistant = () => {
             // 1. Save User Message
             await sendMessage(conversationId, 'user', text, { clientId });
 
-            // 2. Simulate AI Response (Since we don't have a real backend)
+            // 2. Real AI Response
             // Real implementation would call an API here.
-            setTimeout(async () => {
-                let aiResponse = "I'm your Client Assistant. I can help search for info about this client's website.";
 
-                if (text.toLowerCase().includes('search') || text.toLowerCase().includes('website')) {
-                    aiResponse = "I'm searching the client's website for relevant information... (Simulation: Found 'About Us', 'Services' pages). This client appears to be in the Tech industry.";
-                } else if (text.toLowerCase().includes('campaign')) {
-                    aiResponse = "I can help you plan campaigns. Please switch to the Campaign Management tab to create one.";
-                }
+            // Fetch basic client knowledge context (We can pass this in or fetch it here. For now, we assume implicit context from the conversation flow or previous summary)
+            // Ideally we should pass the client's industry/website context to the AI.
+            // For this quick integration, we'll keep it simple or fetch client data if needed. 
+            // In a real app we'd load the client doc here. Let's just use a generic context + the user's message.
 
-                await sendMessage(conversationId, 'ai', aiResponse, { clientId });
-                setLoading(false);
-            }, 1500);
+            const context = `You are an assistant for a client (ID: ${clientId}). Help valid requests about SEO and Google Ads.`;
+            const responseText = await chatWithAI(text, context);
+
+            await sendMessage(conversationId, 'ai', responseText, { clientId });
+            setLoading(false);
 
         } catch (error) {
             console.error("Error sending message:", error);

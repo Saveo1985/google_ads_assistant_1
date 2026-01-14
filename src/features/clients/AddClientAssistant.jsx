@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import ChatInterface from '../../components/ChatInterface';
 import { addClient, addCampaign } from '../../firebase';
 import { useNavigate } from 'react-router-dom';
+import { analyzeClientWebsite } from '../../services/ai';
 
 const AddClientAssistant = ({ onClose, onClientAdded }) => {
     const [messages, setMessages] = useState([
@@ -88,28 +89,25 @@ const AddClientAssistant = ({ onClose, onClientAdded }) => {
         }, 1000);
     };
 
-    const handleScan = (website, name) => {
-        // Simulate scanning logic
-        const urlLower = website.toLowerCase();
-        let detectedIndustry = "General Business";
-        let keywords = [];
+    const handleScan = async (website, name) => {
+        try {
+            // Real AI Analysis
+            const analysis = await analyzeClientWebsite(name, website);
 
-        if (urlLower.includes('tech') || urlLower.includes('soft')) {
-            detectedIndustry = "Technology / SaaS";
-            keywords = ["software", "cloud", "AI"];
-        } else if (urlLower.includes('shop') || urlLower.includes('store')) {
-            detectedIndustry = "E-Commerce";
-            keywords = ["retail", "online shopping", "sales"];
-        } else if (urlLower.includes('law') || urlLower.includes('legal')) {
-            detectedIndustry = "Legal Services";
+            setClientData(prev => ({
+                ...prev,
+                industry: analysis.industry
+            }));
+
+            const aiMsg = `Scan complete. \n\nI've analyzed **${website}**.\n\n**Industry:** ${analysis.industry}\n**Summary:** ${analysis.summary}\n**Keywords:** ${analysis.keywords.join(', ')}\n\nIs this Industry category correct?`;
+
+            setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: aiMsg }]);
+            setStep('industry_confirm');
+        } catch (error) {
+            const aiMsg = `I had trouble analyzing the website. Let's do it manually. What industry is this business in? (e.g. 'Coffee Shop', 'Lawyer')`;
+            setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: aiMsg }]);
+            setStep('industry_confirm');
         }
-
-        setClientData(prev => ({ ...prev, industry: detectedIndustry }));
-
-        const aiMsg = `Scan complete. \n\nBased on ${website}, this looks like a **${detectedIndustry}** business.\nKeywords found: ${keywords.join(', ') || 'General'}.\n\nIs the industry **${detectedIndustry}** correct?`;
-
-        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: aiMsg }]);
-        setStep('industry_confirm');
     };
 
     return (
