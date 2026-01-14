@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { subscribeToMessages, sendMessage, saveKnowledge } from '../../firebase';
+import { subscribeToMessages, sendMessage, saveKnowledge, addTask } from '../../firebase';
 import ChatInterface from '../../components/ChatInterface';
 import { formatCSVDataForAI, parseCSV } from '../../utils/csvParser';
 import { Upload, FileText } from 'lucide-react';
@@ -26,10 +26,26 @@ const CampaignAssistant = () => {
         setLoading(true);
         await sendMessage(conversationId, 'user', text);
 
+        // Check for "Create Task" intent
+        const lowerText = text.toLowerCase();
+        if (lowerText.startsWith("create task") || lowerText.startsWith("add task")) {
+            const taskDesc = text.replace(/create task|add task/i, '').trim();
+            if (taskDesc) {
+                try {
+                    await addTask(campaignId, taskDesc);
+                    await sendMessage(conversationId, 'ai', `✅ Task created: **${taskDesc}**. You can view it in the Tasks menu.`);
+                } catch (e) {
+                    await sendMessage(conversationId, 'ai', "Failed to create task.");
+                }
+                setLoading(false);
+                return;
+            }
+        }
+
         // Simulate AI
         setTimeout(async () => {
             let response = "I'm analyzing the campaign performance based on your inputs.";
-            if (text.toLowerCase().includes('report') || text.toLowerCase().includes('csv')) {
+            if (lowerText.includes('report') || lowerText.includes('csv')) {
                 response = "Please upload the CSV report so I can analyze it.";
             }
             await sendMessage(conversationId, 'ai', response);
@@ -74,28 +90,20 @@ const CampaignAssistant = () => {
 
     return (
         <div style={{ height: 'calc(100vh - 80px)', position: 'relative' }}>
-            {/* CSV Upload Overlay Button */}
-            <div style={{ position: 'absolute', top: '10px', right: '150px', zIndex: 10 }}>
-                <input
-                    type="file"
-                    accept=".csv"
-                    ref={fileInputRef}
-                    style={{ display: 'none' }}
-                    onChange={handleFileUpload}
-                />
-                <button
-                    onClick={() => fileInputRef.current.click()}
-                    className="btn-text"
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,0,0,0.5)', padding: '0.5rem 1rem', borderRadius: '8px' }}
-                >
-                    <Upload size={16} /> Upload CSV
-                </button>
-            </div>
+            {/* Hidden File Input */}
+            <input
+                type="file"
+                accept=".csv"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                onChange={handleFileUpload}
+            />
 
             <ChatInterface
                 messages={messages}
                 onSendMessage={handleSendMessage}
                 onCleanChat={handleCleanChat}
+                onFileUpload={() => fileInputRef.current?.click()}
                 loading={loading}
                 isCleaning={cleaning}
                 placeholder="Ask about campaign performance..."

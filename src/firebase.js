@@ -10,7 +10,8 @@ import {
     where,
     orderBy,
     onSnapshot,
-    serverTimestamp
+    serverTimestamp,
+    enableIndexedDbPersistence
 } from "firebase/firestore";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
 import { v4 as uuidv4 } from 'uuid';
@@ -30,6 +31,17 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+// Enable Offline Persistence
+enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code == 'failed-precondition') {
+        // Multiple tabs open, persistence can only be enabled in one tab at a a time.
+        console.log("Persistence failed: Multiple tabs open");
+    } else if (err.code == 'unimplemented') {
+        // The current browser does not support all of the features required to enable persistence
+        console.log("Persistence failed: Not supported");
+    }
+});
+
 // Authentication Logic
 let isAuthReady = false;
 let authPromiseResolver;
@@ -37,12 +49,23 @@ const authPromise = new Promise((resolve) => {
     authPromiseResolver = resolve;
 });
 
+// Timeout fallback: If auth doesn't initialize in 3s, resolve anyway to allow offline functionality
+setTimeout(() => {
+    if (!isAuthReady) {
+        console.warn("Auth initialization timed out, proceeding in offline/guest mode.");
+        isAuthReady = true;
+        if (authPromiseResolver) authPromiseResolver(null);
+    }
+}, 3000);
+
 signInAnonymously(auth).catch((error) => {
-    console.error("Auth failed:", error);
+    console.error("Auth failed (likely offline):", error);
+    // If auth fails explicitly (e.g. network error), resolve immediately
+    if (authPromiseResolver) authPromiseResolver(null);
 });
 
 onAuthStateChanged(auth, (user) => {
-    if (user) {
+    if (user && !isAuthReady) {
         console.log("Authenticated as", user.uid);
         isAuthReady = true;
         authPromiseResolver(user);
@@ -105,6 +128,12 @@ export const addCampaign = async (clientId, campaignData) => {
         appId: APP_ID,
         createdAt: new Date(),
     });
+};
+
+export const updateCampaign = async (campaignId, updates) => {
+    await waitForAuth();
+    const campaignRef = doc(db, `apps/${APP_ID}/campaigns/${campaignId}`);
+    return setDoc(campaignRef, updates, { merge: true });
 };
 
 export const subscribeToCampaigns = (clientId, callback) => {
@@ -171,6 +200,31 @@ export const saveKnowledge = async (entityId, summary, type = 'general') => {
         type,
         appId: APP_ID,
         createdAt: new Date()
+    });
+};
+
+// --- Tasks ---
+
+export const addTask = async (campaignId, description) => {
+    await waitForAuth();
+    const tasksRef = getAppCollection('tasks');
+    return addDoc(tasksRef, {
+        description,
+        campaignId: campaignId || 'general', // Optional link to campaign
+        status: 'pending',
+        appId: APP_ID,
+        createdAt: new Date()
+    });
+};
+
+export const subscribeToTasks = (callback) => {
+    waitForAuth().then(() => {
+        const tasksRef = getAppCollection('tasks');
+        const q = query(tasksRef, orderBy("createdAt", "desc"));
+        return onSnapshot(q, (snapshot) => {
+            const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            callback(tasks);
+        });
     });
 };
 

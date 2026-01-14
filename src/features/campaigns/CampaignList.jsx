@@ -1,8 +1,60 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Activity, Briefcase } from 'lucide-react';
+import { Plus, Activity, Briefcase, ChevronDown, ChevronRight } from 'lucide-react';
 import { subscribeToAllCampaigns, addCampaign, subscribeToClients } from '../../firebase';
 import Modal from '../../components/ui/Modal';
+
+const AccordionItem = ({ client, campaigns = [] }) => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <div style={{ marginBottom: '1rem', border: '1px solid var(--border-color)', borderRadius: '12px', background: 'var(--bg-secondary)', overflow: 'hidden' }}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                style={{
+                    width: '100%',
+                    padding: '1rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'white',
+                    cursor: 'pointer'
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                    {isOpen ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                    <span style={{ fontSize: '1.1rem', fontWeight: 500 }}>{client.name}</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>({campaigns.length} campaigns)</span>
+                </div>
+            </button>
+
+            {isOpen && (
+                <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color)', background: 'var(--bg-tertiary)' }}>
+                    {campaigns.length === 0 && <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No campaigns for this client.</div>}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                        {campaigns.map(campaign => (
+                            <div key={campaign.id} className="glass-panel" style={{ padding: '1rem', borderRadius: '8px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                    <span style={{ fontWeight: 500 }}>{campaign.name}</span>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--success)' }}>Active</span>
+                                </div>
+                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                    Budget: <span style={{ color: 'white' }}>{campaign.budget}</span>
+                                </div>
+                                <Link to={`/campaigns/${campaign.id}`} className="btn-primary" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', fontSize: '0.85rem', padding: '0.5rem' }}>
+                                    Open Assistant
+                                </Link>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const CampaignList = () => {
     const [campaigns, setCampaigns] = useState([]);
@@ -15,9 +67,8 @@ const CampaignList = () => {
         const unsubCampaigns = subscribeToAllCampaigns(setCampaigns);
         const unsubClients = subscribeToClients(setClients);
         return () => {
-            // Cleanup if helpers return unsub function directly or promise
-            // In our current firebase.js implementation, they return promise of unsub or just unsub from within promise. 
-            // This is a simplified usage. Real cleanup handled by component unmount mostly.
+            if (unsubCampaigns && typeof unsubCampaigns === 'function') unsubCampaigns();
+            if (unsubClients && typeof unsubClients === 'function') unsubClients();
         };
     }, []);
 
@@ -36,10 +87,8 @@ const CampaignList = () => {
         }
     };
 
-    const getClientName = (id) => {
-        const client = clients.find(c => c.id === id);
-        return client ? client.name : 'Unknown Client';
-    };
+    // Group campaigns by client
+    const getClientCampaigns = (clientId) => campaigns.filter(c => c.clientId === clientId);
 
     return (
         <div className="fade-in">
@@ -50,38 +99,22 @@ const CampaignList = () => {
                 </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                {campaigns.map(campaign => (
-                    <div key={campaign.id} className="glass-panel" style={{ padding: '1.5rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div>
-                                <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{campaign.name}</h3>
-                                <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <Briefcase size={14} /> {getClientName(campaign.clientId)}
-                                </div>
-                            </div>
-                            <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem' }}>
-                                Active
-                            </div>
-                        </div>
-
-                        <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                            Budget: <span style={{ color: 'white' }}>{campaign.budget}</span>
-                        </div>
-
-                        <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                            <Link to={`/campaigns/${campaign.id}`} className="btn-primary" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', fontSize: '0.9rem', padding: '0.6rem' }}>
-                                Manage Campaign
-                            </Link>
-                        </div>
-                    </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {clients.map(client => (
+                    <AccordionItem key={client.id} client={client} campaigns={getClientCampaigns(client.id)} />
                 ))}
+
+                {clients.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)' }}>
+                        <p>No clients found. Create a client first.</p>
+                    </div>
+                )}
             </div>
 
-            {campaigns.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)' }}>
-                    <Activity size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
-                    <p>No active campaigns found. Create one to get started.</p>
+            {campaigns.length === 0 && clients.length > 0 && (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                    <Activity size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
+                    <p>No campaigns yet. Expand a client or click New Campaign to create one.</p>
                 </div>
             )}
 

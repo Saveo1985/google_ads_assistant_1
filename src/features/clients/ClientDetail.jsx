@@ -2,26 +2,60 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, Routes, Route, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MessageSquare, Activity } from 'lucide-react';
 import ClientAssistant from './ClientAssistant';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase'; // Direct access for single doc fetch if not in helper
+import { subscribeToCampaigns, addCampaign } from '../../firebase';
+import Modal from '../../components/ui/Modal';
+import NewCampaignModal from '../../features/campaigns/NewCampaignModal';
+import { Plus } from 'lucide-react';
 
-// We need a helper for getting a single client
-const getClient = async (id) => {
-    // Ideally this should be in firebase.js but for speed adding here or assuming we can use db
-    // We need to know APP_ID to construct path: apps/{APP_ID}/clients/{id}
-    // Let's import getAppId from firebase.js
-    // Wait, I didn't export getAppId. 
-    // I'll fetch it from the 'clients' list or just pass it in props.
-    // Actually, I should update firebase.js to export a getClient helper or just use the pattern.
-    // For now, I'll rely on the List to pass data or just fetch it. Fetching is better for deep links.
-    return null; // Placeholder
+const ClientCampaignsView = ({ clientId }) => {
+    const [campaigns, setCampaigns] = useState([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    useEffect(() => {
+        const unsub = subscribeToCampaigns(clientId, setCampaigns);
+        return () => unsub && unsub();
+    }, [clientId]);
+
+    return (
+        <div className="fade-in">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3>Campaigns</h3>
+                <button className="btn-primary" onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.8rem', fontSize: '0.85rem' }}>
+                    <Plus size={16} /> Add Campaign
+                </button>
+            </div>
+
+            {campaigns.length === 0 && <p className="text-secondary" style={{ marginTop: '1rem' }}>No campaigns found for this client.</p>}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+                {campaigns.map(campaign => (
+                    <div key={campaign.id} className="glass-panel" style={{ padding: '1rem', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                            <span style={{ fontWeight: 500 }}>{campaign.name}</span>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--success)' }}>Active</span>
+                        </div>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                            Budget: <span style={{ color: 'white' }}>{campaign.budget}</span>
+                        </div>
+                        <Link to={`/campaigns/${campaign.id}`} className="btn-primary" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', fontSize: '0.85rem', padding: '0.5rem' }}>
+                            Open Assistant
+                        </Link>
+                    </div>
+                ))}
+            </div>
+
+            <NewCampaignModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                clientId={clientId}
+            />
+        </div>
+    );
 };
 
 const ClientDetail = () => {
     const { clientId } = useParams();
     const navigate = useNavigate();
-    // In a real app we'd fetch client details here.
-    // For now, simple layout wrapper for nested routes.
 
     return (
         <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -33,17 +67,13 @@ const ClientDetail = () => {
                     <h2 style={{ margin: 0 }}>Client Dashboard</h2>
                     <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>ID: {clientId}</span>
                 </div>
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
-                    <Link to={`/clients/${clientId}/chat`} className="btn-primary" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
-                        <MessageSquare size={16} /> Open Assistant
-                    </Link>
-                </div>
             </div>
 
             <div style={{ flex: 1, position: 'relative' }}>
                 <Routes>
-                    <Route path="/" element={<div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Select an action or open the Assistant.</div>} />
+                    <Route path="/" element={<div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Select an action from the list.</div>} />
                     <Route path="chat" element={<ClientAssistant />} />
+                    <Route path="campaigns" element={<ClientCampaignsView clientId={clientId} />} />
                 </Routes>
             </div>
         </div>

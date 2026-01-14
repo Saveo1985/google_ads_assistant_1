@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Globe, ExternalLink, MessageSquare } from 'lucide-react';
+import { Plus, Globe, ExternalLink, MessageSquare, Activity } from 'lucide-react';
 import { subscribeToClients, addClient } from '../../firebase';
 import Modal from '../../components/ui/Modal';
+import AddClientAssistant from './AddClientAssistant';
 
 const ClientList = () => {
     const [clients, setClients] = useState([]);
@@ -64,8 +65,8 @@ const ClientList = () => {
                             <Link to={`/clients/${client.id}`} className="btn-primary" style={{ flex: 1, textAlign: 'center', textDecoration: 'none', fontSize: '0.9rem', padding: '0.6rem' }}>
                                 Dashboard
                             </Link>
-                            <Link to={`/clients/${client.id}/chat`} className="btn-text" style={{ flex: 1, textAlign: 'center', textDecoration: 'none', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '0.9rem', padding: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                                <MessageSquare size={16} /> Assistant
+                            <Link to={`/clients/${client.id}/campaigns`} className="btn-text" style={{ flex: 1, textAlign: 'center', textDecoration: 'none', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '0.9rem', padding: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                                <Activity size={16} /> Campaigns
                             </Link>
                         </div>
                     </div>
@@ -80,41 +81,13 @@ const ClientList = () => {
 
             {/* Add Client Modal */}
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Client">
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Client Name</label>
-                        <input
-                            className="input-field"
-                            required
-                            value={newClient.name}
-                            onChange={e => setNewClient({ ...newClient, name: e.target.value })}
-                            placeholder="e.g. Acme Corp"
-                        />
-                    </div>
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Website URL</label>
-                        <input
-                            className="input-field"
-                            required
-                            type="url"
-                            value={newClient.website}
-                            onChange={e => setNewClient({ ...newClient, website: e.target.value })}
-                            placeholder="https://example.com"
-                        />
-                    </div>
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Industry</label>
-                        <input
-                            className="input-field"
-                            value={newClient.industry}
-                            onChange={e => setNewClient({ ...newClient, industry: e.target.value })}
-                            placeholder="e.g. E-commerce"
-                        />
-                    </div>
-                    <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: '1rem' }}>
-                        {loading ? 'Adding...' : 'Create Client'}
-                    </button>
-                </form>
+                <AddClientAssistant
+                    onClose={() => setIsModalOpen(false)}
+                    onClientAdded={() => {
+                        // Refresh/Close handled by assistant usually, but we ensure modal closes
+                        setIsModalOpen(false);
+                    }}
+                />
             </Modal>
         </div>
     );

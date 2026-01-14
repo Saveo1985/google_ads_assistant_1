@@ -1,10 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { Send, Trash2, Bot, User as UserIcon, Sparkles } from 'lucide-react';
+import { Send, Trash2, Bot, User as UserIcon, Sparkles, Upload } from 'lucide-react';
 
 const ChatInterface = ({
     messages,
     onSendMessage,
     onCleanChat,
+    onFileUpload,
     loading,
     placeholder = "Ask me anything...",
     isCleaning = false
@@ -29,20 +30,6 @@ const ChatInterface = ({
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-            {/* Toolbar */}
-            <div style={{ padding: '0.5rem 1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end' }}>
-                <button
-                    onClick={onCleanChat}
-                    disabled={isCleaning || messages.length === 0}
-                    className="btn-text"
-                    title="Clean chat & save memory"
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}
-                >
-                    {isCleaning ? <Sparkles size={16} className="spin" /> : <Trash2 size={16} />}
-                    {isCleaning ? 'Summarizing...' : 'Clean & Remember'}
-                </button>
-            </div>
-
             {/* Messages Area */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {messages.length === 0 && (
@@ -100,32 +87,86 @@ const ChatInterface = ({
 
             {/* Input Area */}
             <div style={{ padding: '1.5rem', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border-color)' }}>
-                <form onSubmit={handleSubmit} style={{ position: 'relative' }}>
-                    <input
-                        className="input-field"
-                        style={{ paddingRight: '3rem' }}
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder={placeholder}
-                        disabled={loading}
-                    />
-                    <button
-                        type="submit"
-                        disabled={!input.trim() || loading}
-                        style={{
-                            position: 'absolute',
-                            right: '8px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            background: 'transparent',
-                            border: 'none',
-                            color: input.trim() ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                            cursor: input.trim() ? 'pointer' : 'default',
-                            transition: 'color 0.2s'
-                        }}
-                    >
-                        <Send size={20} />
-                    </button>
+                <form onSubmit={handleSubmit} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {onFileUpload && (
+                        <button
+                            type="button"
+                            onClick={onFileUpload}
+                            className="btn-icon"
+                            title="Upload CSV"
+                            style={{
+                                background: 'transparent',
+                                border: '1px solid var(--border-color)',
+                                color: 'var(--text-secondary)',
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                flexShrink: 0
+                            }}
+                        >
+                            <Upload size={20} />
+                        </button>
+                    )}
+
+                    {onCleanChat && (
+                        <button
+                            type="button"
+                            onClick={onCleanChat}
+                            disabled={isCleaning || messages.length === 0}
+                            className="btn-icon"
+                            title="Clean & Remember"
+                            style={{
+                                background: 'transparent',
+                                border: '1px solid var(--border-color)',
+                                color: isCleaning ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                flexShrink: 0,
+                                opacity: messages.length === 0 ? 0.5 : 1
+                            }}
+                        >
+                            {isCleaning ? <Sparkles size={18} className="spin" /> : <Trash2 size={18} />}
+                        </button>
+                    )}
+
+                    <div style={{ position: 'relative', flex: 1 }}>
+                        <input
+                            className="input-field"
+                            style={{ paddingRight: '3rem', width: '100%' }}
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder={placeholder}
+                            disabled={loading}
+                        />
+                        <button
+                            type="submit"
+                            disabled={!input.trim() || loading}
+                            style={{
+                                position: 'absolute',
+                                right: '8px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'transparent',
+                                border: 'none',
+                                color: input.trim() ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                cursor: input.trim() ? 'pointer' : 'default',
+                                transition: 'color 0.2s'
+                            }}
+                        >
+                            <Send size={20} />
+                        </button>
+                    </div>
                 </form>
             </div>
             <style>{`

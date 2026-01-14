@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Settings, Activity } from 'lucide-react';
+import { LayoutDashboard, Users, Activity, ListTodo } from 'lucide-react';
 import { waitForAuth } from './firebase';
 import ClientList from './features/clients/ClientList';
 import ClientDetail from './features/clients/ClientDetail';
 import CampaignList from './features/campaigns/CampaignList';
 import CampaignAssistant from './features/campaigns/CampaignAssistant';
+import TaskList from './features/tasks/TaskList';
 
 // Placeholder Components
 const Dashboard = () => <div className="fade-in"><h1>Dashboard</h1><p className="text-secondary">Welcome to your Google Ads Assistant.</p></div>;
@@ -43,8 +44,8 @@ function App() {
                         <NavLink to="/clients" className={({ isActive }) => `btn-text ${isActive ? 'active-nav' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', padding: '0.8rem', borderRadius: '8px', textDecoration: 'none', color: 'inherit' }}>
                             <Users size={20} /> Clients
                         </NavLink>
-                        <NavLink to="/campaigns" className={({ isActive }) => `btn-text ${isActive ? 'active-nav' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', padding: '0.8rem', borderRadius: '8px', textDecoration: 'none', color: 'inherit' }}>
-                            <Activity size={20} /> Campaigns
+                        <NavLink to="/tasks" className={({ isActive }) => `btn-text ${isActive ? 'active-nav' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', padding: '0.8rem', borderRadius: '8px', textDecoration: 'none', color: 'inherit' }}>
+                            <ListTodo size={20} /> Tasks
                         </NavLink>
                     </nav>
 
@@ -76,6 +77,7 @@ function App() {
                             <Route path="/clients/:clientId/*" element={<ClientDetail />} />
                             <Route path="/campaigns" element={<CampaignList />} />
                             <Route path="/campaigns/:campaignId" element={<CampaignAssistant />} />
+                            <Route path="/tasks" element={<TaskList />} />
                         </Routes>
                     </div>
                 </main>
